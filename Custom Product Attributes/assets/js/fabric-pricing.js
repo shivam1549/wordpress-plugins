@@ -1,5 +1,18 @@
 jQuery(document).ready(function ($) {
     // Set initial values based on the first option selected
+
+    $('form.cart').on('submit', function(e) {
+        var fabricWidth = $('select[name="fabric_width"]').val();  // Get the fabric width
+        var fabricLength = $('input[name="fabric_length"]').val();  // Get the fabric length
+        var fabricweight = $('select[name="fabric_weight"]').val(); 
+
+        if (!fabricWidth || !fabricLength || !fabricweight) {
+            e.preventDefault(); // Stop form submission
+            alert('Please select a fabric width and enter a valid fabric length.'); // Show error message
+            return false;
+        }
+    });
+
     var $widthSelect = $('#fabric-width');
     var $rateDisplay = $('#fabric-rate');
     var $minLengthDisplay = $('#fabric-min-length');
@@ -87,7 +100,7 @@ jQuery(document).ready(function ($) {
                 filterednewarray.push(element.weight);
             }
         });
-        var fabricweighthtml = `<label>Fabric Weight</label><select name="fabric_weight" id="fabricweightselect">`;
+        var fabricweighthtml = `<label>Fabric Weight</label><select name="fabric_weight" id="fabricweightselect"><option>--Select--</option>`;
         filterednewarray.forEach(fabricweight => {
             fabricweighthtml += `<option value="${fabricweight}">${fabricweight}</option>`
         })

@@ -67,11 +67,11 @@ function fabric_pricing_meta_box_callback($post)
                     foreach ($fabric_pricing_data as $index => $fabric) {
                 ?>
                         <tr>
-                            <td><input type="text" name="fabric_weight[]" value="<?php echo esc_attr($fabric['weight']); ?>" /></td>
-                            <td><input type="text" name="fabric_width[]" value="<?php echo esc_attr($fabric['width']); ?>" /></td>
-                            <td><input type="text" name="fabric_rate[]" value="<?php echo esc_attr($fabric['rate']); ?>" /></td>
-                            <td><input type="text" name="fabric_min_length[]" value="<?php echo esc_attr($fabric['min_length']); ?>" /></td>
-                            <td><input type="text" name="fabric_min_price[]" value="<?php echo esc_attr($fabric['min_price']); ?>" /></td>
+                            <td><input type="text" required name="fabric_weight[]" value="<?php echo esc_attr($fabric['weight']); ?>" /></td>
+                            <td><input type="number" required name="fabric_width[]" value="<?php echo esc_attr($fabric['width']); ?>" /></td>
+                            <td><input type="number" required name="fabric_rate[]" value="<?php echo esc_attr($fabric['rate']); ?>" /></td>
+                            <td><input type="number" required name="fabric_min_length[]" value="<?php echo esc_attr($fabric['min_length']); ?>" /></td>
+                            <td><input type="number" required name="fabric_min_price[]" value="<?php echo esc_attr($fabric['min_price']); ?>" /></td>
                             <td><button type="button" class="remove_row button">Remove</button></td>
                         </tr>
                     <?php
@@ -80,11 +80,11 @@ function fabric_pricing_meta_box_callback($post)
                     // Display one empty row as a default
                     ?>
                     <tr>
-                        <td><input type="text" name="fabric_weight[]" value="" /></td>
-                        <td><input type="text" name="fabric_width[]" value="" /></td>
-                        <td><input type="text" name="fabric_rate[]" value="" /></td>
-                        <td><input type="text" name="fabric_min_length[]" value="" /></td>
-                        <td><input type="text" name="fabric_min_price[]" value="" /></td>
+                        <td><input type="text"  name="fabric_weight[]" value="" /></td>
+                        <td><input type="number"  name="fabric_width[]" value="" /></td>
+                        <td><input type="number"  name="fabric_rate[]" value="" /></td>
+                        <td><input type="number"  name="fabric_min_length[]" value="" /></td>
+                        <td><input type="number"  name="fabric_min_price[]" value="" /></td>
                         <td><button type="button" class="remove_row button">Remove</button></td>
                     </tr>
                 <?php
@@ -109,11 +109,11 @@ function fabric_pricing_meta_box_callback($post)
             // Add a new row when "Add More" is clicked
             $('#add_more_rows').click(function() {
                 var newRow = `<tr>
-                    <td><input type="text" name="fabric_weight[]" value="" /></td>
-                    <td><input type="text" name="fabric_width[]" value="" /></td>
-                    <td><input type="text" name="fabric_rate[]" value="" /></td>
-                    <td><input type="text" name="fabric_min_length[]" value="" /></td>
-                    <td><input type="text" name="fabric_min_price[]" value="" /></td>
+                    <td><input type="text" required name="fabric_weight[]" value="" /></td>
+                    <td><input type="number" required name="fabric_width[]" value="" /></td>
+                    <td><input type="number" required name="fabric_rate[]" value="" /></td>
+                    <td><input type="number" required name="fabric_min_length[]" value="" /></td>
+                    <td><input type="number" required name="fabric_min_price[]" value="" /></td>
                     <td><button type="button" class="remove_row button">Remove</button></td>
                 </tr>`;
                 $('#fabric_pricing_table tbody').append(newRow);
@@ -270,6 +270,17 @@ function my_plugin_enqueue_scripts() {
     }
 }
 add_action('wp_enqueue_scripts', 'my_plugin_enqueue_scripts');
+
+function validate_fabric_custom_fields($passed, $product_id, $quantity) {
+    // Check if fabric fields are filled
+    if (empty($_POST['fabric_width']) || empty($_POST['fabric_length']) || empty($_POST['fabric_weight'])) {
+        wc_add_notice(__('Please select fabric width, enter fabric length, and provide fabric weight.'), 'error');
+        return false; // Prevent product from being added to the cart
+    }
+
+    return $passed; // Continue adding to cart if validation passes
+}
+add_filter('woocommerce_add_to_cart_validation', 'validate_fabric_custom_fields', 10, 3);
 
 
 // Capture fabric width and length when the product is added to the cart
@@ -443,8 +454,8 @@ function fabric_extra_options_meta_box_callback($post) {
                     foreach ($fabric_extra_options as $option) {
                         ?>
                         <tr>
-                            <td><input type="text" name="extra_option_name[]" value="<?php echo esc_attr($option['name']); ?>"></td>
-                            <td><input type="number" name="extra_option_percentage[]" value="<?php echo esc_attr($option['percentage']); ?>" step="0.01"></td>
+                            <td><input type="text" required name="extra_option_name[]" value="<?php echo esc_attr($option['name']); ?>"></td>
+                            <td><input type="number" required name="extra_option_percentage[]" value="<?php echo esc_attr($option['percentage']); ?>" step="0.01"></td>
                             <td><button type="button" class="remove-extra-option button">Remove</button></td>
                         </tr>
                         <?php
@@ -452,7 +463,7 @@ function fabric_extra_options_meta_box_callback($post) {
                 } else {
                     ?>
                     <tr>
-                        <td><input type="text" name="extra_option_name[]" value=""></td>
+                        <td><input type="text"  name="extra_option_name[]" value=""></td>
                         <td><input type="number" name="extra_option_percentage[]" value="" step="0.01"></td>
                         <td><button type="button" class="remove-extra-option button">Remove</button></td>
                     </tr>
@@ -467,7 +478,7 @@ function fabric_extra_options_meta_box_callback($post) {
     <script>
         jQuery(document).ready(function($) {
             $('#add-extra-option').on('click', function() {
-                $('#fabric-extra-options-table tbody').append('<tr><td><input type="text" name="extra_option_name[]" value=""></td><td><input type="number" name="extra_option_percentage[]" value="" step="0.01"></td><td><button type="button" class="remove-extra-option button">Remove</button></td></tr>');
+                $('#fabric-extra-options-table tbody').append('<tr><td><input type="text" required name="extra_option_name[]" value=""></td><td><input required type="number" name="extra_option_percentage[]" value="" step="0.01"></td><td><button type="button" class="remove-extra-option button">Remove</button></td></tr>');
             });
 
             $(document).on('click', '.remove-extra-option', function() {
