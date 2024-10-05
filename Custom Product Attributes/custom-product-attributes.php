@@ -52,6 +52,7 @@ function fabric_pricing_meta_box_callback($post)
         <table id="fabric_pricing_table" class="widefat">
             <thead>
                 <tr>
+                    <th>Fabric Weight</th>
                     <th>Fabric Width (inches)</th>
                     <th>Fabric Rate (Price per yard)</th>
                     <th>Minimum Length (yards)</th>
@@ -66,6 +67,7 @@ function fabric_pricing_meta_box_callback($post)
                     foreach ($fabric_pricing_data as $index => $fabric) {
                 ?>
                         <tr>
+                            <td><input type="text" name="fabric_weight[]" value="<?php echo esc_attr($fabric['weight']); ?>" /></td>
                             <td><input type="text" name="fabric_width[]" value="<?php echo esc_attr($fabric['width']); ?>" /></td>
                             <td><input type="text" name="fabric_rate[]" value="<?php echo esc_attr($fabric['rate']); ?>" /></td>
                             <td><input type="text" name="fabric_min_length[]" value="<?php echo esc_attr($fabric['min_length']); ?>" /></td>
@@ -78,6 +80,7 @@ function fabric_pricing_meta_box_callback($post)
                     // Display one empty row as a default
                     ?>
                     <tr>
+                        <td><input type="text" name="fabric_weight[]" value="" /></td>
                         <td><input type="text" name="fabric_width[]" value="" /></td>
                         <td><input type="text" name="fabric_rate[]" value="" /></td>
                         <td><input type="text" name="fabric_min_length[]" value="" /></td>
@@ -106,6 +109,7 @@ function fabric_pricing_meta_box_callback($post)
             // Add a new row when "Add More" is clicked
             $('#add_more_rows').click(function() {
                 var newRow = `<tr>
+                    <td><input type="text" name="fabric_weight[]" value="" /></td>
                     <td><input type="text" name="fabric_width[]" value="" /></td>
                     <td><input type="text" name="fabric_rate[]" value="" /></td>
                     <td><input type="text" name="fabric_min_length[]" value="" /></td>
@@ -137,6 +141,7 @@ function save_fabric_pricing_meta_box_data($post_id)
     }
 
     // Save fabric pricing data
+    $fabric_weight = isset($_POST['fabric_weight']) ? $_POST['fabric_weight'] : [];
     $fabric_widths = isset($_POST['fabric_width']) ? $_POST['fabric_width'] : [];
     $fabric_rates = isset($_POST['fabric_rate']) ? $_POST['fabric_rate'] : [];
     $fabric_min_lengths = isset($_POST['fabric_min_length']) ? $_POST['fabric_min_length'] : [];
@@ -147,6 +152,7 @@ function save_fabric_pricing_meta_box_data($post_id)
     for ($i = 0; $i < count($fabric_widths); $i++) {
         if (!empty($fabric_widths[$i])) {
             $fabric_pricing_data[] = [
+                'weight' => sanitize_text_field($fabric_weight[$i]),
                 'width' => sanitize_text_field($fabric_widths[$i]),
                 'rate' => sanitize_text_field($fabric_rates[$i]),
                 'min_length' => sanitize_text_field($fabric_min_lengths[$i]),
@@ -176,8 +182,29 @@ function show_fabric_pricing_options() {
     $fabric_pricing_data = json_decode($fabric_pricing_json, true); // Decode the JSON into an array
     
     if (!empty($fabric_pricing_data)) {
+        wp_enqueue_script('jquery');
+
+        wp_enqueue_script(
+            'fabric-pricing-js',
+            plugin_dir_url(__FILE__) . 'assets/js/fabric-pricing.js',
+            array('jquery'),
+            '1.0.0',
+            true
+        );
+
+            // Pass the currency symbol to the JS file
+            wp_localize_script('fabric-pricing-js', 'fabricPricingDataarray', array(
+                'fabricdata' => $fabric_pricing_data,
+            )); 
         ?>
+        
+       
         <div class="fabric-pricing">
+
+        <div class="fabric-weight" id="fabricweight">
+            
+        </div>
+
             <label for="fabric-width">Select Fabric Width:</label>
             <select id="fabric-width" name="fabric_width">
                 <?php foreach ($fabric_pricing_data as $fabric) { ?>
@@ -199,7 +226,7 @@ function show_fabric_pricing_options() {
             <label for="fabric-length">Enter Length (in yards):</label>
             <input type="number" id="fabric-length" name="fabric_length" min="0" step="0.1" />
 
-            <p>Total Price: <span id="total-price"></span></p>
+            <p>Total Price: <span style="color:red; font-size:20px" id="total-price"></span></p>
         </div>
         <?php
     }
@@ -251,7 +278,8 @@ function add_fabric_custom_fields_to_cart($cart_item_data, $product_id, $variati
         // Sanitize and store the extra fabric options
         $cart_item_data['extra_fabric_options'] = array_map('sanitize_text_field', $_POST['extra_fabric_options']);
     }
-    if (isset($_POST['fabric_width']) && isset($_POST['fabric_length'])) {
+    if (isset($_POST['fabric_width']) && isset($_POST['fabric_length']) && isset($_POST['fabric_weight'])) {
+        $cart_item_data['fabric_weight'] = sanitize_text_field($_POST['fabric_weight']);
         $cart_item_data['fabric_width'] = sanitize_text_field($_POST['fabric_width']);
         $cart_item_data['fabric_length'] = sanitize_text_field($_POST['fabric_length']);
         
@@ -263,12 +291,19 @@ function add_fabric_custom_fields_to_cart($cart_item_data, $product_id, $variati
 add_filter('woocommerce_add_cart_item_data', 'add_fabric_custom_fields_to_cart', 10, 3);
 // Display fabric width and length in the cart
 function display_fabric_custom_fields_in_cart($item_data, $cart_item) {
+    if (isset($cart_item['fabric_weight'])) {
+        $item_data[] = array(
+            'name' => 'Fabric Weight',
+            'value' => sanitize_text_field($cart_item['fabric_weight']),
+        );
+    }
     if (isset($cart_item['fabric_width'])) {
         $item_data[] = array(
             'name' => 'Fabric Width',
             'value' => sanitize_text_field($cart_item['fabric_width']),
         );
     }
+    
     if (isset($cart_item['fabric_length'])) {
         $item_data[] = array(
             'name' => 'Fabric Length',
@@ -290,7 +325,7 @@ add_filter('woocommerce_get_item_data', 'display_fabric_custom_fields_in_cart', 
 // Update the price based on fabric width rate and length
 function update_fabric_price_in_cart($cart) {
     foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
-        if (isset($cart_item['fabric_width']) && isset($cart_item['fabric_length'])) {
+        if (isset($cart_item['fabric_width']) && isset($cart_item['fabric_length']) && isset($cart_item['fabric_weight'])) {
             // Retrieve the pricing information for the selected fabric width
             $fabric_pricing_json = get_post_meta($cart_item['product_id'], '_fabric_pricing', true);
             
@@ -300,12 +335,14 @@ function update_fabric_price_in_cart($cart) {
             if (!empty($fabric_pricing_data)) {
                 $selected_width = sanitize_text_field($cart_item['fabric_width']);
                 $length = floatval($cart_item['fabric_length']);
+                $selected_weight = sanitize_text_field($cart_item['fabric_weight']);
                 $rate_per_yard = 0;
 
                 // Find the rate for the selected width
                 foreach ($fabric_pricing_data as $fabric) {
-                    if ($fabric['width'] == $selected_width) {
+                    if ($fabric['width'] == $selected_width && $fabric['weight'] == $selected_weight) {
                         $rate_per_yard = floatval($fabric['rate']);
+                        $min_price = floatval($fabric['min_price']);
                         break;
                     }
                 }
@@ -313,6 +350,9 @@ function update_fabric_price_in_cart($cart) {
                 // Calculate the new price based on the selected width's rate and length entered by user
                 if ($rate_per_yard > 0 && $length > 0) {
                     $new_price = $rate_per_yard * $length;
+                    if($new_price < $min_price){
+                        $new_price = $min_price; 
+                    }
                     $price_increase = 0;
                     if(isset($cart_item['extra_fabric_options'])){
                         $extra_options_meta = get_post_meta($cart_item['product_id'], '_fabric_extra_options', true);
